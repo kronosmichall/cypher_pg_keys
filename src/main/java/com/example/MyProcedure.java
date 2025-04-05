@@ -32,7 +32,7 @@ public class MyProcedure {
         Pattern pattern = Pattern.compile(
             "FOR\\s*\\((.*?)\\)\\s*" +
             "IDENTIFIER\\s*(.*?)\\s*" +
-            "WITHIN\\s*\\((.*?)\\)\\."
+            "WITHIN\\s*(\\(.*?\\))\\."
         );
 
         Matcher matcher = pattern.matcher(pgQuery);
@@ -49,7 +49,7 @@ public class MyProcedure {
 
 
             String format = """
-                MATCH %s
+                MATCH (%s)
                 RETURN COLLECT {
                     MATCH %s
                     RETURN %s
