@@ -1,0 +1,23 @@
+FOR 
+    (x:City) 
+IDENTIFIER 
+    x.name, z.name, z.size
+WITHIN
+    (x)-[:isPartOf]->(z:Country).
+
+FOR x WITHIN ( x : Forum ) -[: hasMember ] - >(: Person )
+IDENTIFIER p WITHIN ( x ) -[: hasModerator ] - >( p : Person ) .
+
+
+MATCH (x:City)
+RETURN COLLECT {
+    MATCH (x)-[:isPartOf]->(z:Country)
+    RETURN {xname: x.name, zname:z.name, zsize: z.size}
+} as result
+
+FOR 
+    (x:City) 
+IDENTIFIER 
+    x.name, z.name, z.size
+WITHIN
+    (x)-[:isPartOf]->(z:Country).

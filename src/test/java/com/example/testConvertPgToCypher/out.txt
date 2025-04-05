@@ -1,0 +1,5 @@
+MATCH (x:City)
+    RETURN COLLECT {
+        MATCH (x)-[:isPartOf]->(z:Country)
+        RETURN {xname:x.name, zname:z.name, zsize:z.size}
+    } as result;
