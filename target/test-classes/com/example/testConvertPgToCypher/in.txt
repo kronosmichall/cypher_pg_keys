@@ -1,6 +1,0 @@
-FOR 
-    (x:City) 
-IDENTIFIER 
-    x.name, z.name, z.size
-WITHIN
-    (x)-[:isPartOf]->(z:Country).
