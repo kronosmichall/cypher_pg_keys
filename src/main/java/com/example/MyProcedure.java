@@ -28,6 +28,12 @@ public class MyProcedure {
     @org.neo4j.procedure.Context
     public Log log;
 
+//    static Pattern pattern = Pattern.compile(
+//      "FOR\\s*\\((.*?)\\)\\s*" +
+//            Restrictor.regex + "\\s*(.*?)\\s*" +
+//            "WITHIN\\s*(\\(.*?\\))\\."
+//    );
+
     @Procedure(name = "pgkeys.validateDetailed", mode = Mode.READ)
     @Description("Returns a simple greeting.")
     public Stream<Result> validateDetailed(@Name("schemaPath") String schemaName) {
@@ -64,7 +70,8 @@ public class MyProcedure {
     public String convertPgToCypher(String pgQuery) throws Exception {
         Pattern pattern = Pattern.compile(
             "FOR\\s*\\((.*?)\\)\\s*" +
-            "IDENTIFIER\\s*(.*?)\\s*" +
+            Restrictor.regex +
+            "\\s*(.*?)\\s*" +
             "WITHIN\\s*(\\(.*?\\))\\."
         );
 
@@ -73,8 +80,10 @@ public class MyProcedure {
 
         if (matcher.find()) {
             var forClause = matcher.group(1).trim();
-            var identifierClause = matcher.group(2).trim();
-            var withinClause = matcher.group(3).trim();
+            var restrictorStr = matcher.group(2).trim();
+            var restrictor = Restrictor.fromString(restrictorStr);
+            var identifierClause = matcher.group(3).trim();
+            var withinClause = matcher.group(4).trim();
 
             // Print individual components
             System.out.println("FOR Clause: " + forClause);
@@ -100,14 +109,15 @@ public class MyProcedure {
             }
             WITH entries, [e in entries where e in entries2] as intersection
             WITH collect(entries) as centries, collect(intersection) as cintersection
-            return all(e in centries where size(e) = 1) AND all(e in cintersection where size(e) = 0)
-            """; 
+            {returnClause}
+            """;
 
             String mainVar = forClause.split(":")[0];
             String mainVarLabel = forClause.split(":")[1];
             String identifierParams = argsToDictString(identifierClause);
             String withinClause2 = withinClause.replace(mainVar, "x2");
             String identifierParams2 = identifierParams.replace(mainVar, "x2");
+            String returnClause = returnClause(restrictor);
 
             Map<String, Object> params = Map.of(
                 "forClause", forClause,
@@ -116,7 +126,8 @@ public class MyProcedure {
                 "mainVar", mainVar,
                 "mainVarLabel", mainVarLabel,
                 "withinClause2", withinClause2,
-                "identifierParams2", identifierParams2
+                "identifierParams2", identifierParams2,
+                "returnClause", returnClause
             );
             return new StringFormatter(format).format(params);
         } else {
@@ -125,24 +136,48 @@ public class MyProcedure {
         }
     }
 
-    public String argsToDictString(String args) {
+    private String returnClause(Restrictor restrictor) {
+       switch (restrictor) {
+           case IDENTIFIER -> {
+               return "return all(e in centries where size(e) = 1) AND all(e in cintersection where size(e) = 0)";
+           }
+           case EXCLUSIVE_MANDATORY -> {
+               return "return all(e in centries where size(e) >= 1) AND all(e in cintersection where size(e) = 0)";
+           }
+           case EXCLUSIVE_SINGLETON -> {
+               return "return all(e in centries where size(e) <= 1) AND all(e in cintersection where size(e) = 0)";
+           }
+           case EXCLUSIVE -> {
+               return "all(e in cintersection where size(e) = 0)";
+           }
+           case MANDATORY -> {
+               return "return all(e in centries where size(e) >= 1)";
+           }
+           case SINGLETON -> {
+               return "return all(e in centries where size(e) <= 1)";
+           }
+           default -> throw new IllegalStateException("Unexpected value: " + restrictor);
+       }
+    }
+
+    private String argsToDictString(String args) {
         String[] elements = args.split(",\\s*");
-        elements =  Stream.of(elements)
+        elements = Stream.of(elements)
             .map(String::trim)
-            .map(w ->  w.replaceAll("\\.", "") + ":" + w)
+            .map(w -> w.replaceAll("\\.", "") + ":" + w)
             .map(w -> "\t" + w)
             .toArray(String[]::new);
         return String.join(",\n", elements);
     }
 
-    public static class StringFormatter {
-        public String str;
+    private static class StringFormatter {
+        String str;
 
-        public StringFormatter(String str) {
+        StringFormatter(String str) {
             this.str = str;
         }
 
-        public String format(Map<String, Object> params) {
+        String format(Map<String, Object> params) {
             String str2 = new String(str);
             for (Map.Entry<String, Object> entry : params.entrySet()) {
                 str2 = str2.replace("{" + entry.getKey() + "}", entry.getValue().toString());
