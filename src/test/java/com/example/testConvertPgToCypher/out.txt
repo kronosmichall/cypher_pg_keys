@@ -1,5 +1,11 @@
 MATCH (x:City)
-    RETURN COLLECT {
-        MATCH (x)-[:isPartOf]->(z:Country)
-        RETURN {xname:x.name, zname:z.name, zsize:z.size}
-    } as result;
+OPTIONAL MATCH (x)-[:isPartOf]->(z:Country)
+WITH
+  COLLECT({
+    xname: x.name,
+    zname: z.name,
+    zsize: z.size
+  }) AS result
+WITH result,
+    reduce(s = [], x IN result | CASE WHEN x IN s THEN s ELSE s + [x] END) AS uniqueResult
+return size(result) = size(uniqueResult) AND all(r in result where r.xname is not null and r.zname is not null and r.zsize is not null)

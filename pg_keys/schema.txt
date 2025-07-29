@@ -1,23 +1,47 @@
-FOR 
-    (x:City) 
+FOR (x:City)
 IDENTIFIER 
     x.name, z.name, z.size
 WITHIN
     (x)-[:isPartOf]->(z:Country).
 
-FOR x WITHIN ( x : Forum ) -[: hasMember ] - >(: Person )
-IDENTIFIER p WITHIN ( x ) -[: hasModerator ] - >( p : Person ) .
+
 
 
 MATCH (x:City)
-RETURN COLLECT {
-    MATCH (x)-[:isPartOf]->(z:Country)
-    RETURN {xname: x.name, zname:z.name, zsize: z.size}
-} as result
+OPTIONAL MATCH (x)-[:isPartOf]->(z:Country)
+WITH x, COLLECT({
+  xname: x.name,
+  zsize: z.size,
+  zname: z.name
+}) AS entries
 
-FOR 
-    (x:City) 
-IDENTIFIER 
-    x.name, z.name, z.size
-WITHIN
-    (x)-[:isPartOf]->(z:Country).
+
+WITH xname, zsize, zname, COLLECT(x) AS entries ?
+
+
+
+CALL {
+  WITH x, entries
+  MATCH (x2:City)
+  MATCH (x2)-[:isPartOf]->(z:Country) // tu bez optional bo przecięcia z pustymi zbiorami nie są potrzebne
+  WHERE id(x) < id(x2)
+  WITH x, entries, x2, COLLECT({
+    xname: x.name,
+    zsize: z.size,
+    zname: z.name
+  }) as entries2
+  return entries2
+}
+with entries, [x IN entries WHERE x IN entries2] as intersection
+with collect(entries) as centries, collect(intersection) as cintersection
+return all(e in centries where size(e) = 1) AND all(i in cintersection where size(i) = 0)
+
+
+EXCLUSIVE
+return all(i in cintersection where size(i) = 0)
+
+EXCLUSIVE MANDATORY
+return all(e in centries where size(e) >= 1) AND all(i in cintersection where size(i) = 0)
+
+EXCLUSIVE SINGLETON
+return all(e in centries where size(e) <= 1) AND all(i in cintersection where size(i) = 0)
