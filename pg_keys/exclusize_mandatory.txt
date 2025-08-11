@@ -1,0 +1,20 @@
+// Create countries
+MATCH (n)
+DETACH DELETE n;
+
+// Create cities and relate them to countries
+CREATE (c1:City {name: 'New York'})-[:isPartOf]->(:Country {name: 'USA', size: 5})
+CREATE (c2:City {name: 'Toronto'})-[:isPartOf]->(:Country {name: 'Canada', size: 3})
+CREATE (c3:City {name: 'Berlin'})-[:isPartOf]->(:Country {name: 'Germany', size: 2});
+
+MATCH (child:City {name: "New York"})
+WITH child
+CREATE (k1:Country {name: "USA2", size: 1})
+CREATE (k2:Country {name: "USA3", size: 1})
+MERGE (child)-[:isPartOf]->(k1)
+MERGE (child)-[:isPartOf]->(k2);
+
+MATCH (child2:City {name: "Berlin"})
+with child2
+CREATE (k3:Country {name: "Germany2", size: 1})
+MERGE (child2)-[:isPartOf]->(k3);

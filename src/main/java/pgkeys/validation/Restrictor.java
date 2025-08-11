@@ -1,4 +1,4 @@
-package com.example;
+package pgkeys.validation;
 
 enum Restrictor {
     IDENTIFIER,
