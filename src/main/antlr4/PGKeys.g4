@@ -15,7 +15,7 @@ restrictorClause: anythingUntilWithin;
 
 // More specific rules for structure validation
 propertyList: property (COMMA property)*;
-property: IDENTIFIER (DOT IDENTIFIER)*;
+property: IDENTIFIER (PERIOD IDENTIFIER)*;
 cypherExpression: LPAREN nodePattern RPAREN relationshipPattern* LPAREN nodePattern RPAREN;
 nodePattern: IDENTIFIER (COLON IDENTIFIER)?;
 relationshipPattern: DASH LBRACKET COLON IDENTIFIER RBRACKET DASH GREATER;
@@ -37,7 +37,6 @@ LBRACKET: '[';
 RBRACKET: ']';
 COLON: ':';
 COMMA: ',';
-DOT: '.';
 PERIOD: '.';
 DASH: '-';
 GREATER: '>';

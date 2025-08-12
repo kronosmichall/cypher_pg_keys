@@ -64,9 +64,7 @@ public class PGKeysListenerImpl extends PGKeysBaseListener {
 
     @Override
     public void enterWhereClause(PGKeysParser.WhereClauseContext ctx) {
-        // Use the original input text to preserve spacing
-        int start = ctx.getStart().getStartIndex();
-        int stop = ctx.getStop().getStopIndex();
-        currentQuery.whereClause = ctx.getStart().getInputStream().getText(org.antlr.v4.runtime.misc.Interval.of(start, stop));
+        // Use getText() to get the parsed text without including extra tokens
+        currentQuery.whereClause = ctx.getText();
     }
 }

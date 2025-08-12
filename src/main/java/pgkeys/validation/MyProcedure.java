@@ -96,8 +96,8 @@ public class MyProcedure {
         String mainVar2 = "__internal__" + mainVar;
         String mainVarLabel = query.mainVarLabel;
         String identifierParams = argsToDictString(query.restrictorClause);
-        String withinClause2 = query.whereClause.replace(mainVar, mainVar2);
-        String identifierParams2 = identifierParams.replace(mainVar, mainVar2);
+        String withinClause2 = replaceWholeWord(query.whereClause, mainVar, mainVar2);
+        String identifierParams2 = replaceWholeWord(identifierParams, mainVar, mainVar2);
         String returnClause = returnClause(Restrictor.fromString(query.restrictor));
 
         Map<String, Object> params = Map.of(
@@ -139,6 +139,13 @@ public class MyProcedure {
             }
             default -> throw new IllegalStateException("Unexpected value: " + restrictor);
         }
+    }
+
+    private String replaceWholeWord(String text, String word, String replacement) {
+        // Use word boundaries to ensure we only replace whole words
+        // This regex will match the word only when it's not preceded or followed by word characters
+        String regex = "\\b" + Pattern.quote(word) + "\\b";
+        return text.replaceAll(regex, replacement);
     }
 
     private String argsToDictString(String args) {
