@@ -61,7 +61,6 @@ public class MyProcedure {
         byte[] encoded = Files.readAllBytes(Paths.get(path));
         String pgQuery = new String(encoded);
         List<Query> queries = fromString(pgQuery);
-
         return queries.stream().map(q -> {
             try {
                 return convertPgToCypher(q);
@@ -73,17 +72,17 @@ public class MyProcedure {
 
     public String convertPgToCypher(Query query) throws Exception {
         String format = """
-                MATCH ({forClause})
+                MATCH {forClause}
                 OPTIONAL MATCH {withinClause}
                 WITH {mainVar}, COLLECT({
                 {identifierParams}
                 }) as entries
                 CALL {
                     WITH {mainVar}, entries
-                    MATCH (x2:{mainVarLabel})
+                    MATCH ({mainVar2}:{mainVarLabel})
                     MATCH {withinClause2} // tu bez optional bo przecięcia z pustymi zbiorami nie są potrzebne
-                    WHERE id(x2) < id({mainVar})
-                    WITH {mainVar}, entries, x2, COLLECT({
+                    WHERE id({mainVar2}) < id({mainVar})
+                    WITH {mainVar}, entries, {mainVar2}, COLLECT({
                     {identifierParams2}
                     }) as entries2
                     return entries2
@@ -93,24 +92,29 @@ public class MyProcedure {
                 {returnClause}
                 """;
 
-        String mainVar = query.forClause().split(":")[0];
-        String mainVarLabel = query.forClause().split(":")[1];
+        String mainVar = query.mainVar;
+        String mainVar2 = "__internal__" + mainVar;
+        String mainVarLabel = query.mainVarLabel;
         String identifierParams = argsToDictString(query.restrictorClause);
-        String withinClause2 = query.withinClause().replace(mainVar, "x2");
-        String identifierParams2 = identifierParams.replace(mainVar, "x2");
+        String withinClause2 = query.whereClause.replace(mainVar, mainVar2);
+        String identifierParams2 = identifierParams.replace(mainVar, mainVar2);
         String returnClause = returnClause(Restrictor.fromString(query.restrictor));
 
         Map<String, Object> params = Map.of(
                 "forClause", query.forClause(),
-                "withinClause", query.withinClause(),
+                "withinClause", query.whereClause,
                 "identifierParams", identifierParams,
                 "mainVar", mainVar,
+                "mainVar2", mainVar2,
                 "mainVarLabel", mainVarLabel,
                 "withinClause2", withinClause2,
                 "identifierParams2", identifierParams2,
                 "returnClause", returnClause
         );
-        return new StringFormatter(format).format(params);
+        String result = new StringFormatter(format).format(params);
+        log.info("Generated query: \n%s\n", result);
+
+        return result;
     }
 
     private String returnClause(Restrictor restrictor) {
@@ -167,28 +171,10 @@ public class MyProcedure {
         var charStream = CharStreams.fromString(schemaStr);
         var lexer = new PGKeysLexer(charStream);
         var tokens = new CommonTokenStream(lexer);
-        
-        // Debug: Print all tokens
-        tokens.fill();
-        for (int i = 0; i < tokens.size(); i++) {
-            var token = tokens.get(i);
-            System.out.println("Token " + i + ": " + token.getType() + " '" + token.getText() + "'");
-        }
-        tokens.reset();
-        
+
         var parser = new PGKeysParser(tokens);
-        parser.addErrorListener(new org.antlr.v4.runtime.BaseErrorListener() {
-            @Override
-            public void syntaxError(org.antlr.v4.runtime.Recognizer<?, ?> recognizer,
-                    Object offendingSymbol, int line, int charPositionInLine,
-                    String msg, org.antlr.v4.runtime.RecognitionException e) {
-                System.err.println("Syntax error at " + line + ":" + charPositionInLine + " " + msg);
-            }
-        });
         var tree = parser.schema();
         
-        System.out.println("Parse tree: " + tree.toStringTree(parser));
-
         var walker = new ParseTreeWalker();
         var listener = new PGKeysListenerImpl();
         walker.walk(listener, tree);

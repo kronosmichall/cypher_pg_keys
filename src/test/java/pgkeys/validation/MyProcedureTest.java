@@ -48,7 +48,37 @@ WITHIN (c)-[:IS_PART_OF]->(z:Country).
         assertEquals("EXCLUSIVE MANDATORY", q.restrictor);
         assertEquals("c.id, z.id", q.restrictorClause);
         assertEquals("(c)-[:IS_PART_OF]->(z:Country)", q.whereClause);
+    }
 
+    @Test
+    public void fromStringMultipleQueriesTest() {
+        String schema = """
+FOR (c:City)
+EXCLUSIVE MANDATORY
+  c.id, z.id
+WITHIN (c)-[:IS_PART_OF]->(z:Country).
+FOR (p:Person)
+SINGLETON
+  p.name
+WITHIN (p).
+                """;
+        MyProcedure p = new MyProcedure();
+        List<Query> queries = p.fromString(schema);
+        assertEquals(2, queries.size());
+
+        Query q = queries.get(0);
+        assertEquals("c", q.mainVar);
+        assertEquals("City", q.mainVarLabel);
+        assertEquals("EXCLUSIVE MANDATORY", q.restrictor);
+        assertEquals("c.id, z.id", q.restrictorClause);
+        assertEquals("(c)-[:IS_PART_OF]->(z:Country)", q.whereClause);
+
+        Query q2 = queries.get(1);
+        assertEquals("p", q2.mainVar);
+        assertEquals("Person", q2.mainVarLabel);
+        assertEquals("SINGLETON", q2.restrictor);
+        assertEquals("p.name", q2.restrictorClause);
+        assertEquals("(p)", q2.whereClause);
     }
 //    @AfterEach
 //    void tearDown() {
