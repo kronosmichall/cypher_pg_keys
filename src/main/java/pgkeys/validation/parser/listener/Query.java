@@ -6,6 +6,7 @@ public class Query {
     public String whereClause;
     public String restrictorClause;
     public String restrictor;
+    public String stringQuery;
 
     public String forClause() {
        return '(' + mainVar + ':' + mainVarLabel + ')';

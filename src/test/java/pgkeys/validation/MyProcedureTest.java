@@ -1,25 +1,26 @@
-//package pgkeys.validation;
-//
-//import java.nio.file.Files;
-//import java.nio.file.Paths;
-//import java.util.ArrayList;
-//import java.util.List;
-//import java.util.Map;
-//import java.io.IOException;
-//import java.nio.charset.StandardCharsets;
-//
-//import org.apache.commons.lang3.tuple.Pair;
-//import org.junit.jupiter.api.AfterEach;
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.Test;
-//import static org.junit.jupiter.api.Assertions.*;
-//import org.neo4j.driver.AuthTokens;
-//import org.neo4j.driver.Driver;
-//import org.neo4j.driver.GraphDatabase;
-//import org.neo4j.driver.Session;
-//import org.neo4j.driver.Result;
-//
-//public class MyProcedureTest {
+package pgkeys.validation;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+import org.apache.commons.lang3.tuple.Pair;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Result;
+import pgkeys.validation.parser.listener.Query;
+
+public class MyProcedureTest {
 //    static String testDirectory = "src/test/java/com/example/";
 //    private Session session;
 //    @BeforeEach
@@ -29,6 +30,26 @@
 //        initDB1(session);
 //    }
 //
+    @Test
+    public void fromStringTest() {
+        String schema = """
+FOR (c:City)
+EXCLUSIVE MANDATORY
+  c.id, z.id
+WITHIN (c)-[:IS_PART_OF]->(z:Country).
+                """;
+        MyProcedure p = new MyProcedure();
+        List<Query> queries = p.fromString(schema);
+        assertEquals(1, queries.size());
+
+        Query q = queries.get(0);
+        assertEquals("c", q.mainVar);
+        assertEquals("City", q.mainVarLabel);
+        assertEquals("EXCLUSIVE MANDATORY", q.restrictor);
+        assertEquals("c.id, z.id", q.restrictorClause);
+        assertEquals("(c)-[:IS_PART_OF]->(z:Country)", q.whereClause);
+
+    }
 //    @AfterEach
 //    void tearDown() {
 //        session.close();
@@ -150,4 +171,4 @@
 //                """;
 //        session.run(query);
 //    }
-//}
+}

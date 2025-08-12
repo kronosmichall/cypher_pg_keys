@@ -19,8 +19,18 @@ public class PGKeysListenerImpl extends PGKeysBaseListener {
     }
 
     @Override
+    public void enterSchema(PGKeysParser.SchemaContext ctx) {
+        System.out.println("enterSchema called with " + ctx.getChildCount() + " children");
+        for (int i = 0; i < ctx.getChildCount(); i++) {
+            System.out.println("Child " + i + ": " + ctx.getChild(i).getText());
+        }
+    }
+
+    @Override
     public void enterQuery(PGKeysParser.QueryContext ctx) {
+        System.out.println("enterQuery called with text: " + ctx.getText());
         currentQuery = new Query();
+        currentQuery.stringQuery = ctx.getText();
     }
 
     @Override

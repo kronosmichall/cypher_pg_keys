@@ -45,9 +45,11 @@ public class MyProcedure {
 
     public static class Result {
         public Object result;
+//        public String query;
 
-        public Result(Object obj) {
-            this.result = obj;
+        public Result(Object result) {
+//            this.query = query;
+            this.result = result;
         }
 
         public static Stream<Result> fromQueryResult(Map<String, Object> qres) {
@@ -161,12 +163,31 @@ public class MyProcedure {
         }
     }
 
-    private static List<Query> fromString(String schemaStr) {
+   List<Query> fromString(String schemaStr) {
         var charStream = CharStreams.fromString(schemaStr);
         var lexer = new PGKeysLexer(charStream);
         var tokens = new CommonTokenStream(lexer);
+        
+        // Debug: Print all tokens
+        tokens.fill();
+        for (int i = 0; i < tokens.size(); i++) {
+            var token = tokens.get(i);
+            System.out.println("Token " + i + ": " + token.getType() + " '" + token.getText() + "'");
+        }
+        tokens.reset();
+        
         var parser = new PGKeysParser(tokens);
+        parser.addErrorListener(new org.antlr.v4.runtime.BaseErrorListener() {
+            @Override
+            public void syntaxError(org.antlr.v4.runtime.Recognizer<?, ?> recognizer,
+                    Object offendingSymbol, int line, int charPositionInLine,
+                    String msg, org.antlr.v4.runtime.RecognitionException e) {
+                System.err.println("Syntax error at " + line + ":" + charPositionInLine + " " + msg);
+            }
+        });
         var tree = parser.schema();
+        
+        System.out.println("Parse tree: " + tree.toStringTree(parser));
 
         var walker = new ParseTreeWalker();
         var listener = new PGKeysListenerImpl();

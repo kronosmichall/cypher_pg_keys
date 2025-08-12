@@ -1,0 +1,9 @@
+FOR (c:City)
+EXCLUSIVE MANDATORY
+  c.id, z.id
+WITHIN (c)-[:IS_PART_OF]->(z:Country).
+
+FOR (p:Person)
+SINGLETON
+  p.name
+WITHIN (p).

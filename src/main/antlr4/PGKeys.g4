@@ -9,11 +9,17 @@ query : FOR LPAREN mainVar COLON mainLabel RPAREN restrictor restrictorClause wi
 mainLabel: StringLiteral;
 mainVar: StringLiteral;
 withinClause: WITHIN whereClause;
-whereClause: WildCard;
-restrictorClause: WildCard;
+whereClause: anythingUntilForOrDot;
+restrictorClause: anythingUntilWithinOrDot ;
 
 StringLiteral : ('A'.. 'Z' | 'a'..'z' | '0'..'9' | '_' | '-' )+ ;
-WildCard: (.*)? ;
+anythingUntilWithinOrDot
+  :   ( . )*?  { _input.LA(1) == WITHIN || _input.LA(1) == PERIOD }?
+  ;
+
+anythingUntilForOrDot
+  :   ( . )*?  { _input.LA(1) == FOR || _input.LA(1) == PERIOD }?
+  ;
 
 restrictor: IDENTIFIER | EXCLUSIVE_MANDATORY | EXCLUSIVE_SINGLETON | EXCLUSIVE  | MANDATORY | SINGLETON;
 
