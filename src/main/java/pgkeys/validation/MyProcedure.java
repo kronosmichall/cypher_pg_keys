@@ -31,7 +31,7 @@ public class MyProcedure {
     @Procedure(name = "pgkeys.validateDetailed", mode = Mode.READ)
     @Description("Returns a simple greeting.")
     public Stream<Result> validateDetailed(@Name("schemaPath") String schemaName) {
-        String cypher;
+        Stream<String> cypher;
         try {
             cypher = readFileAndConvert(schemaName);
         } catch (Exception e) {
@@ -40,7 +40,7 @@ public class MyProcedure {
         }
         log.info("Running pg_keys query: \n%s", cypher);
 
-        return tx.execute(cypher).stream().flatMap(Result::fromQueryResult);
+        return cypher.flatMap(q -> tx.execute(q).stream()).flatMap(Result::fromQueryResult);
     }
 
     public static class Result {
@@ -55,12 +55,18 @@ public class MyProcedure {
         }
     }
 
-    public String readFileAndConvert(String path) throws Exception {
+    public Stream<String> readFileAndConvert(String path) throws Exception {
         byte[] encoded = Files.readAllBytes(Paths.get(path));
         String pgQuery = new String(encoded);
         List<Query> queries = fromString(pgQuery);
 
-        return convertPgToCypher(queries.get(0));
+        return queries.stream().map(q -> {
+            try {
+                return convertPgToCypher(q);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public String convertPgToCypher(Query query) throws Exception {

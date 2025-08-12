@@ -18,34 +18,38 @@ public class PGKeysListenerImpl extends PGKeysBaseListener {
         return queries;
     }
 
-//    @Override
+    @Override
     public void enterQuery(PGKeysParser.QueryContext ctx) {
         currentQuery = new Query();
     }
 
-//    @Override
+    @Override
     public void exitQuery(PGKeysParser.QueryContext ctx) {
         queries.add(currentQuery);
         currentQuery = null;
     }
 
-//    @Override
+    @Override
     public void enterMainLabel(PGKeysParser.MainLabelContext ctx) {
        currentQuery.mainVarLabel = ctx.getText();
     }
 
+    @Override
     public void enterMainVar(PGKeysParser.MainVarContext ctx) {
         currentQuery.mainVar = ctx.getText();
     }
 
+    @Override
     public void enterRestrictor(PGKeysParser.RestrictorContext ctx) {
         currentQuery.restrictor = ctx.getText();
     }
 
+    @Override
     public void enterRestrictorClause(PGKeysParser.RestrictorClauseContext ctx) {
         currentQuery.restrictorClause = ctx.getText();
     }
 
+    @Override
     public void enterWhereClause(PGKeysParser.WhereClauseContext ctx) {
         currentQuery.whereClause = ctx.getText();
     }
