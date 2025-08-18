@@ -29,46 +29,47 @@ public class MyProcedure {
     public Log log;
 
     @Procedure(name = "pgkeys.validateDetailed", mode = Mode.READ)
-    @Description("Returns a simple greeting.")
+    @Description("Validates PG-keys schema queries and returns detailed results with query information.")
     public Stream<Result> validateDetailed(@Name("schemaPath") String schemaName) {
-        Stream<String> cypher;
+        List<Query> queries;
         try {
-            cypher = readFileAndConvert(schemaName);
+            byte[] encoded = Files.readAllBytes(Paths.get(schemaName));
+            String pgQuery = new String(encoded);
+            queries = fromString(pgQuery);
         } catch (Exception e) {
             log.error("Failed to read schema ", e);
             throw new IllegalArgumentException("No schema %s exists; %s; %s".formatted(schemaName, e.getMessage(), e));
         }
-        log.info("Running pg_keys query: \n%s", cypher);
-
-        return cypher.flatMap(q -> tx.execute(q).stream()).flatMap(Result::fromQueryResult);
+        
+        return queries.parallelStream().flatMap(query -> {
+            try {
+                String cypherQuery = convertPgToCypher(query);
+                log.info("Running pg_keys query: \n%s", cypherQuery);
+                return tx.execute(cypherQuery).stream()
+                    .flatMap(qres -> Result.fromQueryResult(qres, cypherQuery, query.stringQuery));
+            } catch (Exception e) {
+                log.error("Failed to convert or execute query", e);
+                throw new RuntimeException("Failed to process query: " + query.stringQuery, e);
+            }
+        });
     }
 
     public static class Result {
         public Object result;
-//        public String query;
+        public String query;
+        public String originalQuery;
 
-        public Result(Object result) {
-//            this.query = query;
+        public Result(Object result, String query, String originalQuery) {
             this.result = result;
+            this.query = query;
+            this.originalQuery = originalQuery;
         }
 
-        public static Stream<Result> fromQueryResult(Map<String, Object> qres) {
-            return qres.values().stream().map(Result::new);
+        public static Stream<Result> fromQueryResult(Map<String, Object> qres, String query, String originalQuery) {
+            return qres.values().stream().map(value -> new Result(value, query, originalQuery));
         }
     }
 
-    public Stream<String> readFileAndConvert(String path) throws Exception {
-        byte[] encoded = Files.readAllBytes(Paths.get(path));
-        String pgQuery = new String(encoded);
-        List<Query> queries = fromString(pgQuery);
-        return queries.stream().map(q -> {
-            try {
-                return convertPgToCypher(q);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
 
     public String convertPgToCypher(Query query) throws Exception {
         String format = """
@@ -80,7 +81,7 @@ public class MyProcedure {
                 CALL {
                     WITH {mainVar}, entries
                     MATCH ({mainVar2}:{mainVarLabel})
-                    MATCH {withinClause2} // tu bez optional bo przecięcia z pustymi zbiorami nie są potrzebne
+                    MATCH {withinClause2}
                     WHERE id({mainVar2}) < id({mainVar})
                     WITH {mainVar}, entries, {mainVar2}, COLLECT({
                     {identifierParams2}
